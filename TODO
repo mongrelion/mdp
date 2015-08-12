@@ -1,0 +1,4 @@
+* Serve a proper HTML document. Right now is
+  rather bare.
+* Serve stylesheets.
+* Improve logging.
