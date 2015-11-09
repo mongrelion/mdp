@@ -2,15 +2,16 @@ package main
 
 import (
 	"fmt"
-	"net/http"
-	"log"
 	"io/ioutil"
+	"log"
+	"net/http"
 
 	utils "github.com/shurcooL/github_flavored_markdown"
 )
 
 func main() {
 	http.HandleFunc("/", Handler)
+	log.Printf("Listening on port %d\n", 8080)
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
