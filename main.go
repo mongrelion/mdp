@@ -23,7 +23,7 @@ func init() {
 func main() {
 	flag.Parse()
 	http.HandleFunc("/", Handler)
-	log.Printf("Listening on port %s\n", bind)
+	log.Printf("Serving file %s on interface %s\n", file, bind)
 	log.Fatal(http.ListenAndServe(bind, nil))
 }
 
