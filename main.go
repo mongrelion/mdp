@@ -1,11 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"text/template"
 
 	utils "github.com/shurcooL/github_flavored_markdown"
 )
@@ -14,6 +16,29 @@ var (
 	file string
 	bind string
 )
+
+var html = `
+<html>
+  <head>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="./mdp.css" type="text/css" media="screen" charset="utf-8">
+    <link href="https://assets-cdn.github.com/assets/frameworks-343a7fdeaa4388a32c78fff00bca4c2f2b7d112375af9b44bdbaed82c48ad4ee.css" media="all" rel="stylesheet" type="text/css" />
+    <link href="https://assets-cdn.github.com/assets/github-82746a5e80e1762d01af3e079408b886361d5fe5339de04edb1cd6df16c24eb2.css" media="all" rel="stylesheet" type="text/css" />
+    <link href="//cdnjs.cloudflare.com/ajax/libs/octicons/2.1.2/octicons.css" media="all" rel="stylesheet" type="text/css" />
+    <style>
+      body {
+        width: 800px;
+        margin: auto auto;
+      }
+    </style>
+  </head>
+  <body>
+    <article class="markdown-body entry-content" style="padding: 30px;">
+      {{.}}
+    </article>
+  </body>
+</html>
+`
 
 func init() {
 	flag.StringVar(&bind, "bind", ":8080", "interface to bind to, eg. 0.0.0.0:8080")
@@ -38,10 +63,23 @@ func Handler(res http.ResponseWriter, req *http.Request) {
 }
 
 func GetReadme() ([]byte, error) {
-	b, err := ioutil.ReadFile(file)
+	tpl, err := template.New("html").Parse(html)
 	if err != nil {
 		return nil, err
 	}
 
-	return utils.Markdown(b), nil
+	b, err := ioutil.ReadFile(file)
+	if err != nil {
+		return nil, err
+	}
+	md := utils.Markdown(b)
+
+	x := make([]byte, 0)
+	buf := bytes.NewBuffer(x)
+	err = tpl.Execute(buf, string(md))
+	if err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
 }
