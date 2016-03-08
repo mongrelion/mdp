@@ -7,14 +7,20 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"text/template"
 
 	utils "github.com/shurcooL/github_flavored_markdown"
 )
 
+const (
+	VERSION = "0.1.0"
+)
+
 var (
-	file string
-	bind string
+	file    string
+	bind    string
+	version bool
 )
 
 var html = `
@@ -43,10 +49,16 @@ var html = `
 func init() {
 	flag.StringVar(&bind, "bind", ":8080", "interface to bind to, eg. 0.0.0.0:8080")
 	flag.StringVar(&file, "file", "README.md", "file to render on web interface")
+	flag.BoolVar(&version, "version", false, "prints out the version")
 }
 
 func main() {
 	flag.Parse()
+	if version {
+		fmt.Println(VERSION)
+		os.Exit(0)
+	}
+
 	http.HandleFunc("/", Handler)
 	log.Printf("Serving file %s on interface %s\n", file, bind)
 	log.Fatal(http.ListenAndServe(bind, nil))
