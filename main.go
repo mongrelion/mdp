@@ -4,17 +4,17 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+	"regexp"
 	"text/template"
 
 	utils "github.com/shurcooL/github_flavored_markdown"
 )
 
 const (
-	VERSION = "0.1.0"
+	VERSION = "0.2.0"
 )
 
 var (
@@ -27,7 +27,6 @@ var html = `
 <html>
   <head>
     <meta charset="utf-8">
-    <link rel="stylesheet" href="./mdp.css" type="text/css" media="screen" charset="utf-8">
     <link href="https://assets-cdn.github.com/assets/frameworks-343a7fdeaa4388a32c78fff00bca4c2f2b7d112375af9b44bdbaed82c48ad4ee.css" media="all" rel="stylesheet" type="text/css" />
     <link href="https://assets-cdn.github.com/assets/github-82746a5e80e1762d01af3e079408b886361d5fe5339de04edb1cd6df16c24eb2.css" media="all" rel="stylesheet" type="text/css" />
     <link href="//cdnjs.cloudflare.com/ajax/libs/octicons/2.1.2/octicons.css" media="all" rel="stylesheet" type="text/css" />
@@ -48,7 +47,6 @@ var html = `
 
 func init() {
 	flag.StringVar(&bind, "bind", ":8080", "interface to bind to, eg. 0.0.0.0:8080")
-	flag.StringVar(&file, "file", "README.md", "file to render on web interface")
 	flag.BoolVar(&version, "version", false, "prints out the version")
 }
 
@@ -65,27 +63,55 @@ func main() {
 }
 
 func Handler(res http.ResponseWriter, req *http.Request) {
-	readme, err := GetReadme()
-	if err != nil {
-		fmt.Fprintf(res, "Something went wrong:\n%s", err)
-		return
-	}
+	path := "." + req.URL.Path // prepend dot to make all file search relative to current dir
+	pattern := "\\.md$"
+	match, _ := regexp.MatchString(pattern, path)
 
-	fmt.Fprintf(res, string(readme))
+	if !match {
+		// return 404 here
+		http.NotFound(res, req)
+	} else {
+		fileInfo, err := os.Stat(path)
+		if err != nil {
+			log.Printf("error while statting file %s\n%s", path, err)
+			http.NotFound(res, req)
+		} else {
+
+			file, err := os.Open(path)
+			if err != nil {
+				log.Println(err)
+				http.NotFound(res, req)
+			}
+
+			// Read the file here, parse it, do whatever.
+			// Let's first just return the raw content
+			b := make([]byte, fileInfo.Size())
+			log.Printf("reading file %s\n", file.Name())
+			n, err := file.Read(b)
+			if err != nil {
+				log.Printf("error while reading file %s\n%s", file.Name(), err)
+				http.NotFound(res, req)
+			}
+
+			log.Printf("%d bytes read", n)
+			content, err := ParseMD(b)
+			if err != nil {
+				log.Printf("error while parsing file %s\n%s", file.Name(), err)
+				http.NotFound(res, req)
+			} else {
+				fmt.Fprintf(res, string(content))
+			}
+		}
+	}
 }
 
-func GetReadme() ([]byte, error) {
+func ParseMD(b []byte) ([]byte, error) {
 	tpl, err := template.New("html").Parse(html)
 	if err != nil {
 		return nil, err
 	}
 
-	b, err := ioutil.ReadFile(file)
-	if err != nil {
-		return nil, err
-	}
 	md := utils.Markdown(b)
-
 	x := make([]byte, 0)
 	buf := bytes.NewBuffer(x)
 	err = tpl.Execute(buf, string(md))
