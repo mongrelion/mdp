@@ -18,7 +18,6 @@ const (
 )
 
 var (
-	file    string
 	bind    string
 	version bool
 )
@@ -343,7 +342,7 @@ func main() {
 	}
 
 	http.HandleFunc("/", Handler)
-	log.Printf("Serving file %s on interface %s\n", file, bind)
+	log.Printf("Serving on interface %s\n", bind)
 	log.Fatal(http.ListenAndServe(bind, nil))
 }
 
